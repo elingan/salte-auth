@@ -1,5 +1,5 @@
-import 'url-polyfill';
 import 'whatwg-fetch';
-import 'core-js/es6/promise';
+import 'core-js/es/promise';
+import 'core-js/web/url';
 
 import './**/*.js';
