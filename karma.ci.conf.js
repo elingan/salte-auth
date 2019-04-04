@@ -4,13 +4,13 @@ module.exports = (config) => {
   const lastTwoVersions = ['Chrome', 'Firefox', 'MicrosoftEdge', 'Safari'].reduce((output, browser) => {
     // TODO: For some reason Safari 12 throws a 500 error...
     output[`${browser}Latest`] = {
-      base: 'SauceLabs',
+      base: 'TestingBot',
       browserName: browser.toLowerCase(),
       version: browser === 'Safari' ? 'latest-1' : 'latest'
     };
 
     output[`${browser}Prior`] = {
-      base: 'SauceLabs',
+      base: 'TestingBot',
       browserName: browser.toLowerCase(),
       version: browser === 'Safari' ? 'latest-2' : 'latest-1'
     };
@@ -19,7 +19,7 @@ module.exports = (config) => {
 
   const customLaunchers = Object.assign(lastTwoVersions, {
     InternetExplorer11: {
-      base: 'SauceLabs',
+      base: 'TestingBot',
       browserName: 'internet explorer',
       version: '11'
     }
@@ -53,7 +53,7 @@ module.exports = (config) => {
       coverage: false
     }),
 
-    reporters: ['mocha', 'coverage'],
+    reporters: ['mocha', 'coverage', 'testingbot'],
 
     mochaReporter: {
       output: 'minimal',
@@ -66,10 +66,8 @@ module.exports = (config) => {
 
     logLevel: config.LOG_INFO,
 
-    sauceLabs: {
-      testName: 'salte-auth/salte-auth',
-      tunnelIdentifier: process.env.TRAVIS_JOB_NUMBER,
-      startConnect: false
+    testingbot: {
+      testName: 'salte-auth/salte-auth'
     },
 
     customLaunchers: customLaunchers,

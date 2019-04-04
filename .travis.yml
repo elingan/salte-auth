@@ -5,6 +5,7 @@ cache: npm
 branches:
   only:
     - next
+    - next-testingbot
     - /^greenkeeper/.*$/
 script:
   - npm start lint
