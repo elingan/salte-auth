@@ -66,6 +66,7 @@ class SalteAuth {
    * @param {Config} config configuration for salte auth
    */
   constructor(config) {
+    logger('SalteAuth constructor, configuring...');
     if (window.salte.auth) {
       return window.salte.auth;
     }
@@ -253,10 +254,11 @@ class SalteAuth {
    * @private
    */
   get $accessTokenUrl() {
+    logger('Access token url...');
     this.profile.$localState = uuid.v4();
     this.profile.$nonce = uuid.v4();
 
-    let authorizeEndpoint = `${this.$config.providerUrl}/authorize`;
+    let authorizeEndpoint = `${this.$config.providerUrl}/oauth2/authorize`;
     if (this.$provider.authorizeEndpoint) {
       authorizeEndpoint = this.$provider.authorizeEndpoint.call(this, this.$config);
     }
@@ -279,10 +281,11 @@ class SalteAuth {
    * @private
    */
   $loginUrl(refresh) {
+    logger('Login url...');
     this.profile.$localState = uuid.v4();
     this.profile.$nonce = uuid.v4();
 
-    let authorizeEndpoint = `${this.$config.providerUrl}/authorize`;
+    let authorizeEndpoint = `${this.$config.providerUrl}/oauth2/authorize`;
     if (this.$provider.authorizeEndpoint) {
       authorizeEndpoint = this.$provider.authorizeEndpoint.call(this, this.$config);
     }
@@ -706,7 +709,9 @@ class SalteAuth {
       clearTimeout(this.$timeouts.expired);
     }
 
-    const timeToExpiration = (this.profile.userInfo.exp * 1000) - Date.now();
+    const timeToExpiration = this.profile.$expiration - Date.now();
+    // const timeToExpiration = (this.profile.userInfo.exp * 1000) - Date.now();
+    logger('Expiration time in...', Math.round(timeToExpiration/(1000*3600*24)), 'days');
 
     this.$timeouts.refresh = setTimeout(() => {
       // Allows Auto Refresh to be disabled

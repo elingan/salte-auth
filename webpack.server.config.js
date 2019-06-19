@@ -14,8 +14,8 @@ config.externals = [];
 config.entry['salte-auth'] = ['../index.html', '../index.js'];
 config.devtool = 'inline-source-map';
 config.devServer = {
-  host: '0.0.0.0',
-  port: '8081',
+  host: 'localhost',
+  port: '9000',
   historyApiFallback: true,
   disableHostCheck: true
 };

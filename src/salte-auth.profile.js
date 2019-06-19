@@ -39,6 +39,7 @@ class SalteAuthProfile {
    */
   $parseParams() {
     if (location.search || location.hash) {
+      console.dir(location.hash);
       const params = location.search.replace(/^\?/, '').split('&')
         .concat(location.hash.replace(/(#!?[^#]+)?#/, '').split('&'));
 
@@ -310,7 +311,7 @@ class SalteAuthProfile {
       };
     }
 
-    if ((this.$$config.responseType === 'code' && !this.code) || (this.$$config.responseType !== 'code' && !this.$idToken)) {
+    if ((this.$$config.responseType === 'code' && !this.code) || (this.$$config.responseType === 'id_token' && !this.$idToken)) {
       return {
         code: 'login_canceled',
         description: 'User likely canceled the login or something unexpected occurred.'
@@ -333,7 +334,7 @@ class SalteAuthProfile {
       };
     }
 
-    if (Array.isArray(this.userInfo.aud)) {
+    if (this.userInfo && Array.isArray(this.userInfo.aud)) {
       if (this.$$config.validation.azp) {
         if (!this.userInfo.azp) {
           return {

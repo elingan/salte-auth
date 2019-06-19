@@ -9,7 +9,7 @@ const SalteAuthMixinGenerator = function(auth) {
 
     for (let i = 0; i < registeredMixedIns.length; i++) {
       registeredMixedIns[i].user = user;
-      registeredMixedIns[i].authenticated = !auth.profile.idTokenExpired;
+      registeredMixedIns[i].authenticated = !auth.profile.accessTokenExpired; // !auth.profile.idTokenExpired;
     }
   });
 
@@ -38,7 +38,7 @@ const SalteAuthMixinGenerator = function(auth) {
 
         registeredMixedIns.push(this);
         this.user = auth.profile.userInfo || null;
-        this.authenticated = !auth.profile.idTokenExpired;
+        this.authenticated = !auth.profile.accessTokenExpired; //!auth.profile.idTokenExpired;
       }
 
       get auth() {

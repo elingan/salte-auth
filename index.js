@@ -23,6 +23,11 @@ const elements = {
 };
 
 const configs = {
+  wso2: {
+    providerUrl: 'https://sandbox.catenon.com:9444',
+    clientId: 'J7sz2joPJm7Hpo48PVnj0jOxFAoa'
+  },
+
   auth0: {
     providerUrl: 'https://salte-os.auth0.com',
     clientId: '9JTBXBREtckkFHTxTNBceewrnn7NeDd0'
@@ -51,11 +56,11 @@ const configs = {
 const url = new URL(location.href);
 
 const queryParams = Object.assign({
-  'provider': localStorage.getItem('salte.demo.provider') || 'auth0',
-  'login-type': 'redirect',
-  'response-type': localStorage.getItem('salte.demo.response-type') || 'id_token',
+  'provider': localStorage.getItem('salte.demo.provider') || 'wso2',
+  'login-type': 'iframe',
+  'response-type': localStorage.getItem('salte.demo.response-type') || 'token',
   'redirect-url': 'single',
-  'storage-type': localStorage.getItem('salte.demo.storage-type') || 'session',
+  'storage-type': localStorage.getItem('salte.demo.storage-type') || 'local',
   'secured': localStorage.getItem('salte.demo.secured') || 'not-secured'
 }, Array.from(url.searchParams.keys()).reduce((output, key) => {
   const value = url.searchParams.get(key);
@@ -89,6 +94,7 @@ function updateParamsOnChange() {
 }
 
 function refreshUserInfo(error) {
+  console.log('refreshUserInfo...');
   if (error) {
     console.error(error);
   }
@@ -123,15 +129,24 @@ let config = Object.assign(configs[queryParams.provider], {
     logoutUrl: location.protocol + '//' + location.host
   },
 
-  scope: 'openid',
+  scope: 'SANDBOX',
 
   provider: queryParams.provider,
 
   responseType: queryParams['response-type'],
 
-  loginType: 'redirect',
+  loginType: 'iframe',
 
-  storageType: queryParams['storage-type']
+  storageType: queryParams['storage-type'],
+
+  validation: {
+    nonce: false,
+    aud: false,
+    azp: false,
+    state: false
+  },
+
+  autoRefresh: false
 });
 
 if (['all', 'all-routes'].includes(queryParams.secured)) {
@@ -165,10 +180,47 @@ if (queryParams['secured'] !== localStorage.getItem('salte.demo.secured')) {
 
 const auth = new SalteAuth(config);
 
-if (!auth.profile.idTokenExpired) refreshUserInfo();
-auth.on('login', refreshUserInfo);
-auth.on('refresh', refreshUserInfo);
-auth.on('logout', refreshUserInfo);
+//if (!auth.profile.idTokenExpired) refreshUserInfo();
+if (!auth.profile.accessTokenExpired) {
+  refreshUserInfo();
+}
+auth.on('login', _ => {
+  console.log('login event');
+  refreshUserInfo();
+});
+
+auth.on('refresh', _ => {
+  console.log('refresh event');
+  refreshUserInfo();
+});
+
+auth.on('logout', _ => {
+  console.log('logout event');
+  refreshUserInfo();
+});
+
+
+auth.on('expired', _ => {
+  console.log('expired event');
+  refreshUserInfo();
+});
+
+auth.retrieveAccessToken()
+  .then(results => {
+    console.log('retrieve token', results);
+  })
+  .catch(error => {
+    console.log('retrieve token error', error);
+  });
+
+console.log(auth.profile.$accessToken);
+console.log(auth.profile.$expiration);
+console.log(auth.profile.$state);
+console.log(auth.profile.accessTokenExpired);
+console.log(auth.profile.userInfo);
+
+
+
 
 elements.login.addEventListener('click', () => {
   switch (queryParams['login-type']) {
@@ -206,23 +258,26 @@ elements.navigate.addEventListener('click', () => {
   history.pushState({}, '', url.toString());
 });
 
-fetch('https://jsonplaceholder.typicode.com/posts/1').then((response) => {
-  return response.json();
-}).then((data) => {
-  console.log(data);
-}).catch((error) => {
-  console.error(error);
-});
+// /api-user-service/v2/me
 
-const request = new XMLHttpRequest();
-request.addEventListener('error', (event) => {
-  console.error(event.detail);
-});
-request.addEventListener('load', function(event) {
-  console.log(JSON.parse(this.responseText));
-});
-request.open('GET', 'https://jsonplaceholder.typicode.com/posts/2');
-request.send();
+
+// fetch('https://jsonplaceholder.typicode.com/posts/1').then((response) => {
+//   return response.json();
+// }).then((data) => {
+//   console.log(data);
+// }).catch((error) => {
+//   console.error(error);
+// });
+
+// const request = new XMLHttpRequest();
+// request.addEventListener('error', (event) => {
+//   console.error(event.detail);
+// });
+// request.addEventListener('load', function (event) {
+//   console.log(JSON.parse(this.responseText));
+// });
+// request.open('GET', 'https://jsonplaceholder.typicode.com/posts/2');
+// request.send();
 
 class NativeElement extends auth.mixin(HTMLElement) {
   connectedCallback() {

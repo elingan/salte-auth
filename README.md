@@ -1,3 +1,5 @@
+**Esta es una copia adaptada para Catenon de Salte-Autth**
+
 <h2 align="center">
   <div>
     <a href="https://github.com/salte-auth/logos">
