@@ -170,7 +170,7 @@ var logger = debug__WEBPACK_IMPORTED_MODULE_5___default()('@salte-auth/salte-aut
  * The configuration for salte auth
  * @typedef {Object} Config
  * @property {String} providerUrl The base url of your identity provider.
- * @property {('id_token'|'id_token token')} responseType The response type to authenticate with.
+ * @property {('id_token'|'id_token token'|'code')} responseType The response type to authenticate with.
  * @property {String|RedirectURLs} redirectUrl The redirect url specified in your identity provider.
  * @property {String} clientId The client id of your identity provider
  * @property {String} scope A list of space-delimited claims used to determine what user information is provided and what access is given. Most providers require 'openid'.
@@ -209,6 +209,8 @@ function () {
     var _this = this;
 
     _classCallCheck(this, SalteAuth);
+
+    logger('SalteAuth constructor, configuring...');
 
     if (window.salte.auth) {
       return window.salte.auth;
@@ -391,9 +393,10 @@ function () {
      * @private
      */
     value: function $loginUrl(refresh) {
+      logger('Login url...');
       this.profile.$localState = uuid__WEBPACK_IMPORTED_MODULE_4___default.a.v4();
       this.profile.$nonce = uuid__WEBPACK_IMPORTED_MODULE_4___default.a.v4();
-      var authorizeEndpoint = "".concat(this.$config.providerUrl, "/authorize");
+      var authorizeEndpoint = "".concat(this.$config.providerUrl, "/oauth2/authorize");
 
       if (this.$provider.authorizeEndpoint) {
         authorizeEndpoint = this.$provider.authorizeEndpoint.call(this, this.$config);
@@ -878,7 +881,9 @@ function () {
         clearTimeout(this.$timeouts.expired);
       }
 
-      var timeToExpiration = this.profile.userInfo.exp * 1000 - Date.now();
+      var timeToExpiration = this.profile.$expiration - Date.now(); // const timeToExpiration = (this.profile.userInfo.exp * 1000) - Date.now();
+
+      logger('Expiration time in...', Math.round(timeToExpiration / (1000 * 3600 * 24)), 'days');
       this.$timeouts.refresh = setTimeout(function () {
         // Allows Auto Refresh to be disabled
         if (_this9.$config.autoRefresh) {
@@ -1031,9 +1036,10 @@ function () {
   }, {
     key: "$accessTokenUrl",
     get: function get() {
+      logger('Access token url...');
       this.profile.$localState = uuid__WEBPACK_IMPORTED_MODULE_4___default.a.v4();
       this.profile.$nonce = uuid__WEBPACK_IMPORTED_MODULE_4___default.a.v4();
-      var authorizeEndpoint = "".concat(this.$config.providerUrl, "/authorize");
+      var authorizeEndpoint = "".concat(this.$config.providerUrl, "/oauth2/authorize");
 
       if (this.$provider.authorizeEndpoint) {
         authorizeEndpoint = this.$provider.authorizeEndpoint.call(this, this.$config);
@@ -6438,6 +6444,7 @@ function () {
     key: "$parseParams",
     value: function $parseParams() {
       if (location.search || location.hash) {
+        console.dir(location.hash);
         var params = location.search.replace(/^\?/, '').split('&').concat(location.hash.replace(/(#!?[^#]+)?#/, '').split('&'));
         logger("Hash detected, parsing...", params);
 
@@ -6574,7 +6581,7 @@ function () {
         };
       }
 
-      if (this.$$config.responseType === 'code' && !this.code || this.$$config.responseType !== 'code' && !this.$idToken) {
+      if (this.$$config.responseType === 'code' && !this.code || this.$$config.responseType === 'id_token' && !this.$idToken) {
         return {
           code: 'login_canceled',
           description: 'User likely canceled the login or something unexpected occurred.'
@@ -6597,7 +6604,7 @@ function () {
         };
       }
 
-      if (Array.isArray(this.userInfo.aud)) {
+      if (this.userInfo && Array.isArray(this.userInfo.aud)) {
         if (this.$$config.validation.azp) {
           if (!this.userInfo.azp) {
             return {
@@ -8995,7 +9002,7 @@ var SalteAuthMixinGenerator = function SalteAuthMixinGenerator(auth) {
 
     for (var i = 0; i < registeredMixedIns.length; i++) {
       registeredMixedIns[i].user = user;
-      registeredMixedIns[i].authenticated = !auth.profile.idTokenExpired;
+      registeredMixedIns[i].authenticated = !auth.profile.accessTokenExpired; // !auth.profile.idTokenExpired;
     }
   });
   auth.on('logout', function (error) {
@@ -9028,7 +9035,8 @@ var SalteAuthMixinGenerator = function SalteAuthMixinGenerator(auth) {
           _this = _possibleConstructorReturn(this, _getPrototypeOf(_class).call(this));
           registeredMixedIns.push(_assertThisInitialized(_this));
           _this.user = auth.profile.userInfo || null;
-          _this.authenticated = !auth.profile.idTokenExpired;
+          _this.authenticated = !auth.profile.accessTokenExpired; //!auth.profile.idTokenExpired;
+
           return _this;
         }
 

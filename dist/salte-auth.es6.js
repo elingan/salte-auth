@@ -164,7 +164,7 @@ const logger = debug__WEBPACK_IMPORTED_MODULE_5___default()('@salte-auth/salte-a
  * The configuration for salte auth
  * @typedef {Object} Config
  * @property {String} providerUrl The base url of your identity provider.
- * @property {('id_token'|'id_token token')} responseType The response type to authenticate with.
+ * @property {('id_token'|'id_token token'|'code')} responseType The response type to authenticate with.
  * @property {String|RedirectURLs} redirectUrl The redirect url specified in your identity provider.
  * @property {String} clientId The client id of your identity provider
  * @property {String} scope A list of space-delimited claims used to determine what user information is provided and what access is given. Most providers require 'openid'.
@@ -198,6 +198,8 @@ class SalteAuth {
    * @param {Config} config configuration for salte auth
    */
   constructor(config) {
+    logger('SalteAuth constructor, configuring...');
+
     if (window.salte.auth) {
       return window.salte.auth;
     }
@@ -390,9 +392,10 @@ class SalteAuth {
 
 
   get $accessTokenUrl() {
+    logger('Access token url...');
     this.profile.$localState = uuid__WEBPACK_IMPORTED_MODULE_4___default.a.v4();
     this.profile.$nonce = uuid__WEBPACK_IMPORTED_MODULE_4___default.a.v4();
-    let authorizeEndpoint = "".concat(this.$config.providerUrl, "/authorize");
+    let authorizeEndpoint = "".concat(this.$config.providerUrl, "/oauth2/authorize");
 
     if (this.$provider.authorizeEndpoint) {
       authorizeEndpoint = this.$provider.authorizeEndpoint.call(this, this.$config);
@@ -417,9 +420,10 @@ class SalteAuth {
 
 
   $loginUrl(refresh) {
+    logger('Login url...');
     this.profile.$localState = uuid__WEBPACK_IMPORTED_MODULE_4___default.a.v4();
     this.profile.$nonce = uuid__WEBPACK_IMPORTED_MODULE_4___default.a.v4();
-    let authorizeEndpoint = "".concat(this.$config.providerUrl, "/authorize");
+    let authorizeEndpoint = "".concat(this.$config.providerUrl, "/oauth2/authorize");
 
     if (this.$provider.authorizeEndpoint) {
       authorizeEndpoint = this.$provider.authorizeEndpoint.call(this, this.$config);
@@ -850,7 +854,9 @@ class SalteAuth {
       clearTimeout(this.$timeouts.expired);
     }
 
-    const timeToExpiration = this.profile.userInfo.exp * 1000 - Date.now();
+    const timeToExpiration = this.profile.$expiration - Date.now(); // const timeToExpiration = (this.profile.userInfo.exp * 1000) - Date.now();
+
+    logger('Expiration time in...', Math.round(timeToExpiration / (1000 * 3600 * 24)), 'days');
     this.$timeouts.refresh = setTimeout(() => {
       // Allows Auto Refresh to be disabled
       if (this.$config.autoRefresh) {
@@ -6175,14 +6181,6 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var lodash_find__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(lodash_find__WEBPACK_IMPORTED_MODULE_1__);
 /* harmony import */ var debug__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(125);
 /* harmony import */ var debug__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(debug__WEBPACK_IMPORTED_MODULE_2__);
-function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
-
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
-
-function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
-
-function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
-
 
 
 
@@ -6226,17 +6224,13 @@ class SalteAuthProfile {
 
   $parseParams() {
     if (location.search || location.hash) {
+      console.dir(location.hash);
       const params = location.search.replace(/^\?/, '').split('&').concat(location.hash.replace(/(#!?[^#]+)?#/, '').split('&'));
       logger("Hash detected, parsing...", params);
 
       for (let i = 0; i < params.length; i++) {
         const param = params[i];
-
-        const _param$split = param.split('='),
-              _param$split2 = _slicedToArray(_param$split, 2),
-              key = _param$split2[0],
-              value = _param$split2[1];
-
+        const [key, value] = param.split('=');
         this.$parse(key, decodeURIComponent(value));
       }
 
@@ -6528,7 +6522,7 @@ class SalteAuthProfile {
       };
     }
 
-    if (this.$$config.responseType === 'code' && !this.code || this.$$config.responseType !== 'code' && !this.$idToken) {
+    if (this.$$config.responseType === 'code' && !this.code || this.$$config.responseType === 'id_token' && !this.$idToken) {
       return {
         code: 'login_canceled',
         description: 'User likely canceled the login or something unexpected occurred.'
@@ -6551,7 +6545,7 @@ class SalteAuthProfile {
       };
     }
 
-    if (Array.isArray(this.userInfo.aud)) {
+    if (this.userInfo && Array.isArray(this.userInfo.aud)) {
       if (this.$$config.validation.azp) {
         if (!this.userInfo.azp) {
           return {
@@ -8714,7 +8708,7 @@ const SalteAuthMixinGenerator = function SalteAuthMixinGenerator(auth) {
 
     for (let i = 0; i < registeredMixedIns.length; i++) {
       registeredMixedIns[i].user = user;
-      registeredMixedIns[i].authenticated = !auth.profile.idTokenExpired;
+      registeredMixedIns[i].authenticated = !auth.profile.accessTokenExpired; // !auth.profile.idTokenExpired;
     }
   });
   auth.on('logout', error => {
@@ -8739,7 +8733,7 @@ const SalteAuthMixinGenerator = function SalteAuthMixinGenerator(auth) {
         super();
         registeredMixedIns.push(this);
         this.user = auth.profile.userInfo || null;
-        this.authenticated = !auth.profile.idTokenExpired;
+        this.authenticated = !auth.profile.accessTokenExpired; //!auth.profile.idTokenExpired;
       }
 
       get auth() {
